@@ -99,12 +99,12 @@ public class DAO {
                                         statement_it.setInt(2, i);/*On lui affecte un ID (l'indice du tableaux)*/
                                         statement_it.setInt(3, productIDs[i]);/*On place l'ID du produits*/
                                         statement_it.setInt(4,quantities[i]);/*On place la quantité du produit*/
-                                        float pr = 0;/*On initialise pr qui sera le cost*/
+                                        float pr = 0;/*On initialise pr qui sera le*/
                                         statement_price.setInt(1, productIDs[i]);/*On calcule le pr en lancant une requete SQL*/
                                         try (ResultSet resultSet = statement_price.executeQuery()) {
-                                            if (resultSet.next()) {
+                                            resultSet.next();
                                             pr = resultSet.getFloat("Price");/*On recupère le prix d'un produit*/
-                                            }
+                                            
                                         }
                                         statement_it.setFloat(5, pr);/*On rajoute pr comme le cost, il est multiplier automatiquement avec la quantite grace au triggers*/
                                         int numberUpdated = statement_it.executeUpdate();
