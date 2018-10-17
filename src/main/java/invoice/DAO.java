@@ -76,10 +76,51 @@ public class DAO {
 	 * taille
 	 * @throws java.lang.Exception si la transaction a échoué
 	 */
-	public void createInvoice(CustomerEntity customer, int[] productIDs, int[] quantities)
-		throws Exception {
-		throw new UnsupportedOperationException("Pas encore implémenté");
-	}
+	public void createInvoice(CustomerEntity customer, int[] productIDs, int[] quantities) throws Exception {
+            String it = "INSERT INTO Item VALUES(?,?,?,?,?)"; /*Initialisation des requetes SQL*/
+            String inv = "INSERT INTO Invoice(CustomerID) VALUES(?)";
+            String price = "SELECT Price FROM Product WHERE ID = ?";
+            try (	Connection myConnection = myDataSource.getConnection(); /*Creation de la connection dans l'environnement*/
+			PreparedStatement statement_inv = myConnection.prepareStatement(inv, Statement.RETURN_GENERATED_KEYS);/*On ajoute les requete à l'environnement*/
+                        PreparedStatement statement_it = myConnection.prepareStatement(it);
+                        PreparedStatement statement_price = myConnection.prepareStatement(price)) {
+                
+                        myConnection.setAutoCommit(false);/*Debut de creation de la facture*/
+			try {
+				statement_inv.setInt( 1, customer.getCustomerId());/*On commence par creer l'invoice avec le paramètre customerID*/
+                                statement_inv.executeUpdate();/*On execute la requete*/
+                                ResultSet clefs = statement_inv.getGeneratedKeys();/*On recupere l'ID de l'invoice crée automatiquement*/
+                                clefs.next();
+                                    if(productIDs.length != quantities.length){/*On verifie que les deux tableaux sont de longueurs égales*/
+                                        throw new Exception();
+                                    }
+                                    for(int i = 0; i < productIDs.length; i++){/*Pour chaque produit on crée un Item*/
+                                        statement_it.setInt(1, (int) clefs.getInt(1));/*Avec l'ID de l'invoice recuperer au dessus*/
+                                        statement_it.setInt(2, i);/*On lui affecte un ID (l'indice du tableaux)*/
+                                        statement_it.setInt(3, productIDs[i]);/*On place l'ID du produits*/
+                                        statement_it.setInt(4,quantities[i]);/*On place la quantité du produit*/
+                                        float pr = 0;/*On initialise pr qui sera le cost*/
+                                        statement_price.setInt(1, productIDs[i]);/*On calcule le pr en lancant une requete SQL*/
+                                        try (ResultSet resultSet = statement_price.executeQuery()) {
+                                            if (resultSet.next()) {
+                                            pr = resultSet.getFloat("Price");/*On recupère le prix d'un produit*/
+                                            }
+                                        }
+                                        statement_it.setFloat(5, pr);/*On rajoute pr comme le cost, il est multiplier automatiquement avec la quantite grace au triggers*/
+                                        int numberUpdated = statement_it.executeUpdate();
+                                        if(numberUpdated == 0 ){
+                                            throw new Exception();
+                                        }
+                                    }
+				myConnection.commit();/*On commit la transaction*/
+			} catch (Exception ex) {
+				myConnection.rollback();
+				throw ex;
+                        } finally {
+				myConnection.setAutoCommit(true);/*On revient à l'état de base*/				
+			}
+            }
+        }
 
 	/**
 	 *
